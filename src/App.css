@@ -1,0 +1,41 @@
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8fafc;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+  .app {
+    touch-action: none;
+  }
+  
+  .main-content {
+    flex: 1;
+    min-height: 0; /* Flexbox 오버플로우 해결 */
+  }
+}
+
+/* 태블릿 최적화 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-content {
+    padding: 8px;
+  }
+}
+
+/* 데스크톱 */
+@media (min-width: 1025px) {
+  .main-content {
+    padding: 16px;
+  }
+} 

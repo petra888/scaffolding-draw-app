@@ -1,0 +1,297 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: 60px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.tool-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.tool-btn.active {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.tool-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.size-slider {
+  width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.size-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.size-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  min-width: 20px;
+  text-align: center;
+}
+
+.color-picker {
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.zoom-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.zoom-input {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  width: 50px;
+  text-align: center;
+  outline: none;
+}
+
+.zoom-input:focus {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.zoom-percent {
+  font-size: 12px;
+  color: white;
+  margin-left: 2px;
+  margin-right: 4px;
+}
+
+.ratio-input {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  width: 60px;
+  text-align: center;
+  outline: none;
+}
+
+.ratio-input:focus {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.ratio-unit {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-left: 2px;
+}
+
+.scaffold-width-group {
+  background: rgba(255, 215, 0, 0.2); /* 금색 배경으로 강조 */
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+.scaffold-width-select {
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  border: 1px solid rgba(255, 215, 0, 0.7);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: bold;
+  width: 80px;
+  text-align: center;
+  outline: none;
+  cursor: pointer;
+}
+
+.scaffold-width-select:focus {
+  background: #ffffff;
+  border-color: #FFD700;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+.scaffold-width-select option {
+  background: #ffffff;
+  color: #333;
+  font-weight: bold;
+}
+
+.clear-all-btn {
+  background: rgba(220, 53, 69, 0.8) !important; /* 빨간색 배경 */
+  color: white !important;
+  border: 2px solid rgba(220, 53, 69, 1) !important;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.clear-all-btn:hover {
+  background: rgba(220, 53, 69, 1) !important;
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 8px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-height: auto;
+  }
+  
+  .app-title {
+    font-size: 16px;
+    text-align: center;
+  }
+  
+  .toolbar-section {
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .tool-group {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  
+  .tool-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 6px 8px;
+    font-size: 14px;
+  }
+  
+  .size-slider {
+    width: 60px;
+  }
+  
+  .color-picker {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* 작은 모바일 화면 */
+@media (max-width: 480px) {
+  .toolbar-section {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .tool-group {
+    width: 100%;
+    justify-content: center;
+  }
+} 
