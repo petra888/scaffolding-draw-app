@@ -45,6 +45,7 @@ interface DrawingCanvasProps {
   zoom: number;
   canvasOffset: { x: number; y: number };
   setCanvasOffset: (offset: { x: number; y: number }) => void;
+  setZoom: (zoom: number) => void;
   scaffoldWidth: number;
   strokes: Stroke[];
   setStrokes: React.Dispatch<React.SetStateAction<Stroke[]>>;
@@ -60,6 +61,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   zoom,
   canvasOffset,
   setCanvasOffset,
+  setZoom,
   scaffoldWidth,
   strokes,
   setStrokes,
@@ -78,6 +80,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [panStartPoint, setPanStartPoint] = useState<Point | null>(null);
   const [isErasing, setIsErasing] = useState(false);
+  
+  // 핀치 줌을 위한 상태
+  const [touches, setTouches] = useState<React.TouchList | null>(null);
+  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+  const [initialZoom, setInitialZoom] = useState<number>(1);
   
   // 시스템비계 수평재 표준 규격 (mm)
   const SCAFFOLD_LENGTHS = [293, 598, 902, 1207, 1512, 1817];
@@ -733,9 +740,19 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
+    
+    // 캔버스의 실제 크기와 CSS 크기 비율 계산
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // 화면 좌표를 캔버스 좌표로 변환
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
+    
+    // 캔버스 변환(오프셋과 줌) 역계산
     return {
-      x: ((clientX - rect.left) * window.devicePixelRatio - canvasOffset.x) / zoom,
-      y: ((clientY - rect.top) * window.devicePixelRatio - canvasOffset.y) / zoom
+      x: (x - canvasOffset.x) / zoom,
+      y: (y - canvasOffset.y) / zoom
     };
   }, [canvasOffset, zoom]);
 
@@ -752,6 +769,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     ctx.lineTo(to.x, to.y);
     ctx.stroke();
   }, [tool]);
+
+  // 두 터치 포인트 사이의 거리 계산
+  const getTouchDistance = (touches: React.TouchList): number => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
 
   // 가장 가까운 선의 끝점 찾기 (자석 기능)
   const findNearestEndpoint = useCallback((point: Point): Point | null => {
@@ -1067,20 +1092,52 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   // 터치 이벤트
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
-    const touch = e.touches[0];
-    handleStart(touch.clientX, touch.clientY);
-  }, [handleStart]);
+    
+    if (e.touches.length === 2) {
+      // 두 손가락 터치: 핀치 줌 시작
+      setTouches(e.touches);
+      setInitialPinchDistance(getTouchDistance(e.touches));
+      setInitialZoom(zoom);
+      setIsPanning(false); // 핀치 중에는 패닝 비활성화
+    } else if (e.touches.length === 1) {
+      // 한 손가락 터치: 그리기 또는 패닝
+      const touch = e.touches[0];
+      handleStart(touch.clientX, touch.clientY);
+    }
+  }, [handleStart, zoom, getTouchDistance]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
-    const touch = e.touches[0];
-    handleMove(touch.clientX, touch.clientY);
-  }, [handleMove]);
+    
+    if (e.touches.length === 2 && initialPinchDistance !== null) {
+      // 핀치 줌 처리
+      const currentDistance = getTouchDistance(e.touches);
+      const scale = currentDistance / initialPinchDistance;
+      const newZoom = Math.max(0.1, Math.min(5, initialZoom * scale));
+      setZoom(newZoom);
+    } else if (e.touches.length === 1) {
+      // 한 손가락 이동: 그리기 또는 패닝
+      const touch = e.touches[0];
+      handleMove(touch.clientX, touch.clientY);
+    }
+  }, [handleMove, initialPinchDistance, initialZoom, getTouchDistance, setZoom]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
-    handleEnd();
-  }, [handleEnd]);
+    
+    if (e.touches.length === 0) {
+      // 모든 터치 종료
+      handleEnd();
+      setTouches(null);
+      setInitialPinchDistance(null);
+    } else if (e.touches.length === 1) {
+      // 하나의 터치만 남음: 그리기/패닝으로 전환
+      setTouches(null);
+      setInitialPinchDistance(null);
+      const touch = e.touches[0];
+      handleStart(touch.clientX, touch.clientY);
+    }
+  }, [handleEnd, handleStart]);
 
   return (
     <div className="drawing-canvas-container">

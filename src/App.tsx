@@ -46,9 +46,14 @@ function App() {
           setZoom={setZoom}
           scaffoldWidth={scaffoldWidth}
           setScaffoldWidth={setScaffoldWidth}
+          strokes={strokes}
           setStrokes={setStrokes}
+          scaffoldStructures={scaffoldStructures}
           setScaffoldStructures={setScaffoldStructures}
+          supportPosts={supportPosts}
           setSupportPosts={setSupportPosts}
+          canvasOffset={canvasOffset}
+          setCanvasOffset={setCanvasOffset}
         />
       
       <main className="main-content">
@@ -56,6 +61,7 @@ function App() {
           tool={currentTool}
           isGridVisible={isGridVisible}
           zoom={zoom}
+          setZoom={setZoom}
           canvasOffset={canvasOffset}
           setCanvasOffset={setCanvasOffset}
           scaffoldWidth={scaffoldWidth}

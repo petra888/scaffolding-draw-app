@@ -11,9 +11,14 @@ interface ToolbarProps {
   setZoom: (zoom: number) => void;
   scaffoldWidth: number;
   setScaffoldWidth: (width: number) => void;
+  strokes: any[];
   setStrokes: (strokes: any[]) => void;
+  scaffoldStructures: any[];
   setScaffoldStructures: (structures: any[]) => void;
+  supportPosts: any[];
   setSupportPosts: (posts: any[]) => void;
+  canvasOffset: { x: number; y: number };
+  setCanvasOffset: (offset: { x: number; y: number }) => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -25,10 +30,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
   setZoom,
   scaffoldWidth,
   setScaffoldWidth,
+  strokes,
   setStrokes,
+  scaffoldStructures,
   setScaffoldStructures,
-  setSupportPosts
+  supportPosts,
+  setSupportPosts,
+  canvasOffset,
+  setCanvasOffset
 }) => {
+  const [toolbarScale, setToolbarScale] = React.useState(1);
+  
   const handleToolChange = (type: DrawingTool['type']) => {
     setCurrentTool({ ...currentTool, type });
   };
@@ -65,6 +77,59 @@ const Toolbar: React.FC<ToolbarProps> = ({
     setZoom(1);
   };
 
+  const handleFitToScreen = () => {
+    // 모든 그려진 요소들의 경계 계산
+    if (strokes.length === 0 && supportPosts.length === 0) {
+      // 그려진 것이 없으면 기본값으로 리셋
+      setZoom(1);
+      setCanvasOffset({ x: 0, y: 0 });
+      return;
+    }
+    
+    let minX = Infinity, minY = Infinity;
+    let maxX = -Infinity, maxY = -Infinity;
+    
+    // 모든 스트로크의 점들 확인
+    strokes.forEach((stroke: any) => {
+      stroke.points.forEach((point: { x: number; y: number }) => {
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+      });
+    });
+    
+    // 하부자키 위치 확인
+    supportPosts.forEach((post: any) => {
+      minX = Math.min(minX, post.center.x - post.radius);
+      minY = Math.min(minY, post.center.y - post.radius);
+      maxX = Math.max(maxX, post.center.x + post.radius);
+      maxY = Math.max(maxY, post.center.y + post.radius);
+    });
+    
+    // 그려진 영역의 크기
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    
+    // 화면 크기 (여유 공간 포함)
+    const screenWidth = window.innerWidth * 0.8;
+    const screenHeight = (window.innerHeight - 120) * 0.8; // 툴바 높이 제외
+    
+    // 적절한 줌 레벨 계산
+    const zoomX = screenWidth / contentWidth;
+    const zoomY = screenHeight / contentHeight;
+    const newZoom = Math.min(zoomX, zoomY, 2); // 최대 200%로 제한
+    
+    // 중앙 정렬을 위한 오프셋 계산
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const newOffsetX = (window.innerWidth / 2) - (centerX * newZoom);
+    const newOffsetY = ((window.innerHeight - 120) / 2) - (centerY * newZoom);
+    
+    setZoom(newZoom);
+    setCanvasOffset({ x: newOffsetX, y: newOffsetY });
+  };
+
   const handleZoomInput = (value: string) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue >= 10 && numValue <= 500) {
@@ -80,9 +145,28 @@ const Toolbar: React.FC<ToolbarProps> = ({
   };
 
   return (
-    <div className="toolbar">
+    <div className="toolbar" style={{ transform: `scale(${toolbarScale})`, transformOrigin: 'left top' }}>
       <div className="toolbar-section">
         <h1 className="app-title">시스템비계 드로잉</h1>
+        
+        {/* 도구 툴 크기 조절 */}
+        <div className="toolbar-scale-controls">
+          <button 
+            onClick={() => setToolbarScale(Math.max(0.5, toolbarScale - 0.1))}
+            className="toolbar-scale-btn"
+            title="도구 툴 축소"
+          >
+            ➖
+          </button>
+          <span className="toolbar-scale-text">{Math.round(toolbarScale * 100)}%</span>
+          <button 
+            onClick={() => setToolbarScale(Math.min(1.5, toolbarScale + 0.1))}
+            className="toolbar-scale-btn"
+            title="도구 툴 확대"
+          >
+            ➕
+          </button>
+        </div>
       </div>
 
       <div className="toolbar-section">
@@ -231,6 +315,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
           <span className="zoom-percent">%</span>
           <button onClick={handleZoomIn} className="zoom-btn" title="5% 확대">
             🔍+
+          </button>
+          <button onClick={handleFitToScreen} className="zoom-btn fit-to-screen" title="전체 보기">
+            🖼️
           </button>
         </div>
       </div>
