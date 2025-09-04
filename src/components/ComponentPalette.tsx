@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DrawingTool } from '../App';
 import './ComponentPalette.css';
 
 interface ScaffoldComponent {
@@ -7,22 +8,48 @@ interface ScaffoldComponent {
   type: 'horizontal' | 'vertical' | 'diagonal' | 'joint' | 'platform';
   icon: string;
   description: string;
+  length?: number; // mm 단위
+}
+
+interface ComponentPaletteProps {
+  selectedComponent: string | null;
+  setSelectedComponent: (id: string | null) => void;
+  currentTool: DrawingTool;
+  setCurrentTool: (tool: DrawingTool) => void;
 }
 
 const scaffoldComponents: ScaffoldComponent[] = [
   {
-    id: 'h-beam-1',
-    name: '수평재 1m',
+    id: 'h-beam-293',
+    name: '수평재 293mm',
     type: 'horizontal',
     icon: '━',
-    description: '1미터 수평 비계재'
+    description: '293mm 수평 비계재',
+    length: 293
   },
   {
-    id: 'h-beam-2',
-    name: '수평재 2m',
+    id: 'h-beam-598',
+    name: '수평재 598mm',
     type: 'horizontal',
     icon: '━━',
-    description: '2미터 수평 비계재'
+    description: '598mm 수평 비계재',
+    length: 598
+  },
+  {
+    id: 'h-beam-902',
+    name: '수평재 902mm',
+    type: 'horizontal',
+    icon: '━━━',
+    description: '902mm 수평 비계재',
+    length: 902
+  },
+  {
+    id: 'h-beam-1207',
+    name: '수평재 1.2m',
+    type: 'horizontal',
+    icon: '━━━━',
+    description: '1207mm 수평 비계재',
+    length: 1207
   },
   {
     id: 'v-beam',
@@ -39,13 +66,6 @@ const scaffoldComponents: ScaffoldComponent[] = [
     description: '대각선 보강재'
   },
   {
-    id: 'joint',
-    name: '조인트',
-    type: 'joint',
-    icon: '╋',
-    description: '연결 조인트'
-  },
-  {
     id: 'platform',
     name: '발판',
     type: 'platform',
@@ -54,13 +74,55 @@ const scaffoldComponents: ScaffoldComponent[] = [
   }
 ];
 
-const ComponentPalette: React.FC = () => {
+const ComponentPalette: React.FC<ComponentPaletteProps> = ({
+  selectedComponent,
+  setSelectedComponent,
+  currentTool,
+  setCurrentTool
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
 
   const handleComponentSelect = (componentId: string) => {
-    setSelectedComponent(componentId);
-    // TODO: 선택된 부품을 캔버스에 적용하는 로직 추가
+    if (selectedComponent === componentId) {
+      // 같은 부품을 다시 클릭하면 선택 해제
+      setSelectedComponent(null);
+      setCurrentTool({ ...currentTool, type: 'pen' });
+    } else {
+      // 새로운 부품 선택
+      setSelectedComponent(componentId);
+      const component = scaffoldComponents.find(c => c.id === componentId);
+      
+      if (component) {
+        // 부품 타입에 따라 도구 설정 변경
+        const newTool: DrawingTool = {
+          ...currentTool,
+          type: 'scaffold-mode',
+          color: '#2563eb',
+          size: 3
+        };
+
+        // 부품별 특성 설정
+        switch (component.type) {
+          case 'horizontal':
+            newTool.straightLineMode = true;
+            newTool.rightAngleMode = false;
+            break;
+          case 'vertical':
+            newTool.straightLineMode = true;
+            newTool.rightAngleMode = true; // 수직선 우선
+            break;
+          case 'diagonal':
+            newTool.straightLineMode = true;
+            newTool.rightAngleMode = false;
+            break;
+          case 'platform':
+            newTool.type = 'scaffold-mode'; // 사각형 모드
+            break;
+        }
+
+        setCurrentTool(newTool);
+      }
+    }
   };
 
   const togglePalette = () => {
@@ -96,7 +158,9 @@ const ComponentPalette: React.FC = () => {
           
           <div className="palette-info">
             <p className="info-text">
-              부품을 선택한 후 캔버스에서 선을 그리면 해당 부품으로 자동 변환됩니다.
+              {selectedComponent 
+                ? `선택된 부품: ${scaffoldComponents.find(c => c.id === selectedComponent)?.name}`
+                : '부품을 선택하여 표준 규격으로 그리기'}
             </p>
           </div>
         </div>

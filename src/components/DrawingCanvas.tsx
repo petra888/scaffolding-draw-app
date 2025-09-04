@@ -47,6 +47,7 @@ interface DrawingCanvasProps {
   setCanvasOffset: (offset: { x: number; y: number }) => void;
   setZoom: (zoom: number) => void;
   scaffoldWidth: number;
+  selectedComponent: string | null;
   strokes: Stroke[];
   setStrokes: React.Dispatch<React.SetStateAction<Stroke[]>>;
   scaffoldStructures: ScaffoldStructure[];
@@ -63,6 +64,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   setCanvasOffset,
   setZoom,
   scaffoldWidth,
+  selectedComponent,
   strokes,
   setStrokes,
   scaffoldStructures,
@@ -90,6 +92,24 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const SCAFFOLD_LENGTHS = [293, 598, 902, 1207, 1512, 1817];
   const MAX_SCAFFOLD_LENGTH = 1817;
   
+  // 선택된 부품의 길이 가져오기
+  const getComponentLength = useCallback((): number | null => {
+    if (!selectedComponent) return null;
+    
+    // 부품 ID에서 길이 추출 (예: 'h-beam-902' → 902)
+    const match = selectedComponent.match(/h-beam-(\d+)/);
+    if (match) {
+      return parseInt(match[1]);
+    }
+    
+    // 수직재의 경우 scaffoldWidth 사용
+    if (selectedComponent === 'v-beam') {
+      return scaffoldWidth;
+    }
+    
+    return null;
+  }, [selectedComponent, scaffoldWidth]);
+
   // 비계 길이별 선명한 색상 매핑
   const getScaffoldColor = useCallback((length: number): string => {
     switch (length) {
@@ -169,16 +189,49 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2)
     );
     
-    // 실제 픽셀 거리를 mm로 변환 (96px = 300mm 기준)
+    // 방향 벡터 계산
+    const dirX = (end.x - start.x) / totalDistance;
+    const dirY = (end.y - start.y) / totalDistance;
+    
+    // 선택된 부품의 고정 길이가 있으면 사용
+    const componentLength = getComponentLength();
+    if (componentLength && selectedComponent) {
+      // 수평재의 경우 고정 길이로 하나의 세그먼트만 생성
+      if (selectedComponent.startsWith('h-beam-')) {
+        const segmentPixelLength = componentLength / (300 / 96);
+        const segmentEnd: Point = {
+          x: start.x + dirX * segmentPixelLength,
+          y: start.y + dirY * segmentPixelLength
+        };
+        
+        return [{
+          start,
+          end: segmentEnd,
+          length: componentLength
+        }];
+      }
+      // 수직재의 경우 수직선으로 고정
+      else if (selectedComponent === 'v-beam') {
+        const segmentPixelLength = componentLength / (300 / 96);
+        const segmentEnd: Point = {
+          x: start.x,
+          y: start.y + segmentPixelLength
+        };
+        
+        return [{
+          start,
+          end: segmentEnd,
+          length: componentLength
+        }];
+      }
+    }
+    
+    // 기존 로직: 실제 픽셀 거리를 mm로 변환 (96px = 300mm 기준)
     const totalDistanceMM = totalDistance * (300 / 96);
     
     const segments: ScaffoldSegment[] = [];
     let remainingDistanceMM = totalDistanceMM;
     let currentStart = start;
-    
-    // 방향 벡터 계산
-    const dirX = (end.x - start.x) / totalDistance;
-    const dirY = (end.y - start.y) / totalDistance;
     
     while (remainingDistanceMM >= 293) { // 293mm 미만은 무시
       // 정확한 매칭 우선 처리 (1817mm → 1817mm, 1512+293 아님)
@@ -235,7 +288,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
     
     return segments;
-  }, [SCAFFOLD_LENGTHS]);
+  }, [SCAFFOLD_LENGTHS, getComponentLength, selectedComponent]);
 
   // 세로 세그먼트를 정확한 비계폭으로 계산
   const calculateVerticalScaffoldSegments = useCallback((start: Point, end: Point, targetHeightMM: number): ScaffoldSegment[] => {
@@ -709,6 +762,39 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         });
         
         ctx.globalAlpha = 1;
+      } else if (selectedComponent === 'platform') {
+        // 발판 미리보기 (600x300mm 사각형)
+        const platformWidthMM = 600;
+        const platformHeightMM = 300;
+        const platformWidthPx = platformWidthMM / (300 / 96);
+        const platformHeightPx = platformHeightMM / (300 / 96);
+        
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = '#6b7280';
+        ctx.fillStyle = 'rgba(107, 114, 128, 0.2)';
+        ctx.lineWidth = Math.max(tool.size, 2 / zoom);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.7;
+        
+        // 사각형 그리기
+        ctx.beginPath();
+        ctx.rect(startPoint.x, startPoint.y, platformWidthPx, platformHeightPx);
+        ctx.fill();
+        ctx.stroke();
+        
+        // 크기 표시
+        ctx.font = `${Math.max(10 / zoom, 8)}px Arial`;
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+          '발판 600x300mm', 
+          startPoint.x + platformWidthPx / 2, 
+          startPoint.y + platformHeightPx / 2
+        );
+        
+        ctx.globalAlpha = 1;
       } else {
         // 기본 미리보기
         ctx.globalCompositeOperation = 'source-over';
@@ -732,7 +818,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     ctx.restore();
   }, [canvasSize, isGridVisible, canvasOffset, zoom, strokes, supportPosts, 
       startPoint, previewPoint, tool, calculateScaffoldStructure, 
-      createAllSupportPosts, calculateScaffoldSegments, getScaffoldColor]);
+      createAllSupportPosts, calculateScaffoldSegments, getScaffoldColor, selectedComponent]);
 
   // 좌표 변환 (화면 좌표 → 캔버스 좌표)
   const getCanvasPoint = useCallback((clientX: number, clientY: number): Point => {
@@ -1008,13 +1094,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       // 직각 미리보기 (우선순위 높음)
       const rightAnglePoint = calculateRightAnglePoint(startPoint, currentPoint);
       setPreviewPoint(rightAnglePoint);
+    } else if (selectedComponent === 'platform' && startPoint) {
+      // 발판은 사각형으로 미리보기
+      setPreviewPoint(currentPoint);
     } else if (tool.type === 'scaffold-mode' || tool.straightLineMode) {
       // 시스템비계/직선 미리보기
       setPreviewPoint(currentPoint);
     }
       }, [isDrawing, lastPoint, tool, getCanvasPoint, drawLine, currentStroke, 
         findNearestEndpoint, findStrokeAtPoint, findSupportPostAtPoint, startPoint, calculateRightAnglePoint, isPanning, 
-        panStartPoint, setCanvasOffset]);
+        panStartPoint, setCanvasOffset, selectedComponent]);
 
   const handleEnd = useCallback(() => {
     // 팬 모드 종료
@@ -1028,6 +1117,54 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       // 자유 그리기: 완성된 선을 저장
       setStrokes(prev => [...prev, currentStroke]);
       setCurrentStroke(null);
+    } else if (selectedComponent === 'platform' && startPoint && previewPoint) {
+      // 발판: 사각형 영역 생성 (600x300mm 표준 크기)
+      const platformWidthMM = 600;
+      const platformHeightMM = 300;
+      const platformWidthPx = platformWidthMM / (300 / 96);
+      const platformHeightPx = platformHeightMM / (300 / 96);
+      
+      // 발판 사각형의 네 모서리
+      const topLeft = startPoint;
+      const topRight: Point = { x: startPoint.x + platformWidthPx, y: startPoint.y };
+      const bottomLeft: Point = { x: startPoint.x, y: startPoint.y + platformHeightPx };
+      const bottomRight: Point = { x: startPoint.x + platformWidthPx, y: startPoint.y + platformHeightPx };
+      
+      // 발판을 선으로 표현 (사각형)
+      const platformStrokes: Stroke[] = [
+        {
+          id: `${Date.now()}-platform-top`,
+          points: [topLeft, topRight],
+          color: '#6b7280',
+          size: tool.size,
+          timestamp: Date.now()
+        },
+        {
+          id: `${Date.now()}-platform-right`,
+          points: [topRight, bottomRight],
+          color: '#6b7280',
+          size: tool.size,
+          timestamp: Date.now()
+        },
+        {
+          id: `${Date.now()}-platform-bottom`,
+          points: [bottomRight, bottomLeft],
+          color: '#6b7280',
+          size: tool.size,
+          timestamp: Date.now()
+        },
+        {
+          id: `${Date.now()}-platform-left`,
+          points: [bottomLeft, topLeft],
+          color: '#6b7280',
+          size: tool.size,
+          timestamp: Date.now()
+        }
+      ];
+      
+      setStrokes((prev: Stroke[]) => [...prev, ...platformStrokes]);
+      setStartPoint(null);
+      setPreviewPoint(null);
     } else if (tool.type === 'scaffold-mode' && startPoint && previewPoint) {
       // 시스템비계 모드: 사각형 구조 생성 (최우선)
       const structure = calculateScaffoldStructure(startPoint, previewPoint);

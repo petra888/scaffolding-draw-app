@@ -30,6 +30,9 @@ function App() {
   const [pixelToMmRatio, setPixelToMmRatio] = useState(0.353);
   const [scaffoldWidth, setScaffoldWidth] = useState(902);
   
+  // ComponentPalette 선택 상태
+  const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
+  
   // 전체 지우기 기능을 위한 상태들
   const [strokes, setStrokes] = useState<any[]>([]);
   const [scaffoldStructures, setScaffoldStructures] = useState<any[]>([]);
@@ -65,6 +68,7 @@ function App() {
           canvasOffset={canvasOffset}
           setCanvasOffset={setCanvasOffset}
           scaffoldWidth={scaffoldWidth}
+          selectedComponent={selectedComponent}
           strokes={strokes}
           setStrokes={setStrokes}
           scaffoldStructures={scaffoldStructures}
@@ -74,7 +78,12 @@ function App() {
         />
       </main>
       
-      <ComponentPalette />
+      <ComponentPalette 
+        selectedComponent={selectedComponent}
+        setSelectedComponent={setSelectedComponent}
+        currentTool={currentTool}
+        setCurrentTool={setCurrentTool}
+      />
     </div>
   );
 }

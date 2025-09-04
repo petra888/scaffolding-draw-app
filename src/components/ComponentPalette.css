@@ -128,58 +128,85 @@
 
 /* 모바일 최적화 */
 @media (max-width: 768px) {
+  .component-palette {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 50vh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .palette-header {
+    padding: 12px 16px;
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  
+  .palette-header:active {
+    cursor: grabbing;
+  }
+  
+  .palette-title {
+    font-size: 16px;
+  }
+  
+  .toggle-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+  
   .component-grid {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     gap: 8px;
+    padding: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .component-item {
-    padding: 8px 4px;
+    padding: 8px;
     min-height: 70px;
+    touch-action: manipulation;
+  }
+  
+  .component-item:active {
+    transform: scale(0.95);
   }
   
   .component-icon {
     font-size: 20px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   
   .component-name {
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1.2;
   }
   
-  .palette-content {
-    padding: 12px;
-    max-height: 50vh;
+  .palette-info {
+    padding: 8px 12px;
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, #f3f4f6, rgba(243, 244, 246, 0.9));
   }
   
-  .palette-header {
-    padding: 10px 12px;
-  }
-  
-  .palette-title {
-    font-size: 14px;
+  .info-text {
+    font-size: 12px;
   }
 }
 
 /* 작은 모바일 화면 */
 @media (max-width: 480px) {
   .component-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   }
   
   .component-item {
-    padding: 6px 4px;
     min-height: 60px;
-  }
-  
-  .component-icon {
-    font-size: 18px;
-    margin-bottom: 4px;
-  }
-  
-  .component-name {
-    font-size: 10px;
   }
 }
 
