@@ -127,9 +127,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     ctx.lineWidth = 1;
     ctx.globalAlpha = 0.8;
 
-    // 오프셋을 고려한 시작점 계산
-    const startX = (canvasOffset.x % gridSize) - gridSize;
-    const startY = (canvasOffset.y % gridSize) - gridSize;
+    // 캔버스 변환 상태 저장
+    ctx.save();
+    
+    // 격자는 캔버스 좌표계에 고정되어야 함
+    // canvasOffset은 이미 drawLine과 다른 그리기 함수에서 적용되므로
+    // 격자는 (0,0)부터 시작
+    const startX = 0;
+    const startY = 0;
 
     // 세로선
     for (let x = startX; x <= width; x += gridSize) {
@@ -147,8 +152,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       ctx.stroke();
     }
 
+    ctx.restore();
     ctx.globalAlpha = 1;
-  }, [isGridVisible, zoom, canvasSize, canvasOffset]);
+  }, [isGridVisible, zoom, canvasSize]);
 
   // 시스템비계 세그먼트 계산 (드래그 길이를 표준 규격으로 분할)
   const calculateScaffoldSegments = useCallback((start: Point, end: Point): ScaffoldSegment[] => {
@@ -509,213 +515,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     return newPosts;
   }, [supportPosts, strokes, scaffoldWidth]);
 
-  // 미리보기 선 그리기
-  const drawPreviewLine = useCallback((ctx: CanvasRenderingContext2D) => {
-    if (!startPoint || !previewPoint) return;
-    
-    if (tool.type === 'scaffold-mode') {
-      // 시스템비계 모드: 사각형 구조 미리보기
-      const structure = calculateScaffoldStructure(startPoint, previewPoint);
-      const allSegments = [...structure.horizontalSegments, ...structure.verticalSegments];
-      
-      // 비계 선분들 그리기
-      allSegments.forEach((segment, index) => {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = getScaffoldColor(segment.length);
-        ctx.lineWidth = Math.max(tool.size * zoom, 2);
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 0.7;
-        
-        ctx.beginPath();
-        ctx.moveTo(
-          (segment.start.x * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (segment.start.y * zoom + canvasOffset.y) / window.devicePixelRatio
-        );
-        ctx.lineTo(
-          (segment.end.x * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (segment.end.y * zoom + canvasOffset.y) / window.devicePixelRatio
-        );
-        ctx.stroke();
-      });
-      
-      // 하부자키 미리보기 (모든 교차점)
-      const previewPosts = createAllSupportPosts(structure);
-      previewPosts.forEach(post => {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = 'transparent'; // 투명 배경
-        ctx.strokeStyle = '#000000'; // 검정색 선
-        ctx.lineWidth = 2;
-        
-        ctx.beginPath();
-        ctx.arc(
-          (post.center.x * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (post.center.y * zoom + canvasOffset.y) / window.devicePixelRatio,
-          (post.radius * zoom) / window.devicePixelRatio,
-          0,
-          2 * Math.PI
-        );
-        ctx.stroke(); // 선만 그리기 (채우기 없음)
-      });
-      
-      ctx.globalAlpha = 1;
-    } else if (tool.straightLineMode || tool.rightAngleMode) {
-      // 직선/직각 모드: 세그먼트별로 그리기
-      const segments = calculateScaffoldSegments(startPoint, previewPoint);
-      
-      segments.forEach((segment, index) => {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = getScaffoldColor(segment.length);
-        ctx.lineWidth = Math.max(tool.size * zoom, 2);
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 0.8;
-        
-        ctx.beginPath();
-        ctx.moveTo(
-          (segment.start.x * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (segment.start.y * zoom + canvasOffset.y) / window.devicePixelRatio
-        );
-        ctx.lineTo(
-          (segment.end.x * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (segment.end.y * zoom + canvasOffset.y) / window.devicePixelRatio
-        );
-        ctx.stroke();
-        
-        // 길이 표시
-        const midX = (segment.start.x + segment.end.x) / 2;
-        const midY = (segment.start.y + segment.end.y) / 2;
-        const actualDistance = Math.sqrt(
-          Math.pow(segment.end.x - segment.start.x, 2) + 
-          Math.pow(segment.end.y - segment.start.y, 2)
-        );
-        const actualLengthMM = Math.round(actualDistance * (300 / 96));
-        
-        ctx.font = `${Math.max(10 * zoom, 8)}px Arial`;
-        ctx.fillStyle = '#000000';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        ctx.strokeText(
-          `${actualLengthMM}mm`,
-          (midX * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (midY * zoom + canvasOffset.y) / window.devicePixelRatio - 8
-        );
-        ctx.fillText(
-          `${actualLengthMM}mm`,
-          (midX * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (midY * zoom + canvasOffset.y) / window.devicePixelRatio - 8
-        );
-      });
-      
-      ctx.globalAlpha = 1;
-    } else {
-      // 기본 미리보기
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = tool.color;
-      ctx.lineWidth = tool.size * zoom;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.globalAlpha = 0.5;
-      ctx.setLineDash([5, 5]);
-      
-      ctx.beginPath();
-      ctx.moveTo(
-        (startPoint.x * zoom + canvasOffset.x) / window.devicePixelRatio, 
-        (startPoint.y * zoom + canvasOffset.y) / window.devicePixelRatio
-      );
-      ctx.lineTo(
-        (previewPoint.x * zoom + canvasOffset.x) / window.devicePixelRatio, 
-        (previewPoint.y * zoom + canvasOffset.y) / window.devicePixelRatio
-      );
-      ctx.stroke();
-      
-      ctx.globalAlpha = 1;
-      ctx.setLineDash([]);
-    }
-  }, [startPoint, previewPoint, tool, zoom, canvasOffset, calculateScaffoldSegments]);
-
-  // 모든 선 다시 그리기
-  const redrawAllStrokes = useCallback((ctx: CanvasRenderingContext2D) => {
-    strokes.forEach(stroke => {
-      if (stroke.points.length < 2) return;
-      
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = Math.max(stroke.size * zoom, 2); // 최소 2px로 선명하게
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      ctx.beginPath();
-      ctx.moveTo(
-        (stroke.points[0].x * zoom + canvasOffset.x) / window.devicePixelRatio, 
-        (stroke.points[0].y * zoom + canvasOffset.y) / window.devicePixelRatio
-      );
-      
-      for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(
-          (stroke.points[i].x * zoom + canvasOffset.x) / window.devicePixelRatio, 
-          (stroke.points[i].y * zoom + canvasOffset.y) / window.devicePixelRatio
-        );
-      }
-      ctx.stroke();
-      
-      // 비계 선분 길이 표시
-      if (stroke.points.length === 2) {
-        const distance = Math.sqrt(
-          Math.pow(stroke.points[1].x - stroke.points[0].x, 2) + 
-          Math.pow(stroke.points[1].y - stroke.points[0].y, 2)
-        );
-        const lengthMM = Math.round(distance * (300 / 96));
-        
-        // 선분 중앙에 길이 표시
-        const midX = (stroke.points[0].x + stroke.points[1].x) / 2;
-        const midY = (stroke.points[0].y + stroke.points[1].y) / 2;
-        
-        ctx.font = `${Math.max(10 * zoom, 8)}px Arial`;
-        ctx.fillStyle = '#000000';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // 텍스트 배경 (가독성 향상)
-        ctx.strokeText(
-          `${lengthMM}mm`,
-          (midX * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (midY * zoom + canvasOffset.y) / window.devicePixelRatio - 8
-        );
-        ctx.fillText(
-          `${lengthMM}mm`,
-          (midX * zoom + canvasOffset.x) / window.devicePixelRatio,
-          (midY * zoom + canvasOffset.y) / window.devicePixelRatio - 8
-        );
-      }
-    });
-  }, [strokes, zoom, canvasOffset]);
-
-  // 하부자키(수직재) 그리기
-  const drawSupportPosts = useCallback((ctx: CanvasRenderingContext2D) => {
-    supportPosts.forEach(post => {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = 'transparent'; // 투명 배경
-      ctx.strokeStyle = '#000000'; // 검정색 선
-      ctx.lineWidth = 2;
-      
-      ctx.beginPath();
-      ctx.arc(
-        (post.center.x * zoom + canvasOffset.x) / window.devicePixelRatio,
-        (post.center.y * zoom + canvasOffset.y) / window.devicePixelRatio,
-        (post.radius * zoom) / window.devicePixelRatio,
-        0,
-        2 * Math.PI
-      );
-      ctx.stroke(); // 선만 그리기 (채우기 없음)
-    });
-  }, [supportPosts, zoom, canvasOffset]);
-
   // 캔버스 초기화 및 격자 그리기
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -735,18 +534,198 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 격자 그리기
-    drawGrid(ctx);
+    // 캔버스 변환 적용 (격자와 그림이 함께 움직이도록)
+    ctx.save();
+    ctx.translate(canvasOffset.x / window.devicePixelRatio, canvasOffset.y / window.devicePixelRatio);
+    ctx.scale(zoom, zoom);
+
+    // 격자 그리기 (변환된 좌표계에서)
+    if (isGridVisible) {
+      const baseGridSize = 96; // 100% 줌에서 격자 1칸 크기
+      const gridSize = baseGridSize; // zoom은 이미 적용됨
+      
+      // 표시할 격자 범위 계산
+      const startX = Math.floor(-canvasOffset.x / zoom / gridSize) * gridSize;
+      const endX = Math.ceil((canvasSize.width / window.devicePixelRatio - canvasOffset.x) / zoom / gridSize) * gridSize;
+      const startY = Math.floor(-canvasOffset.y / zoom / gridSize) * gridSize;
+      const endY = Math.ceil((canvasSize.height / window.devicePixelRatio - canvasOffset.y) / zoom / gridSize) * gridSize;
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1 / zoom; // 줌에 관계없이 일정한 선 두께
+      ctx.globalAlpha = 0.8;
+
+      // 세로선
+      for (let x = startX; x <= endX; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
+        ctx.stroke();
+      }
+
+      // 가로선
+      for (let y = startY; y <= endY; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 1;
+    }
     
-    // 모든 선 다시 그리기
-    redrawAllStrokes(ctx);
+    // 모든 선 다시 그리기 (변환된 좌표계에서)
+    strokes.forEach(stroke => {
+      if (stroke.points.length < 2) return;
+      
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = Math.max(stroke.size, 2 / zoom); // 최소 2px로 선명하게
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      }
+      ctx.stroke();
+      
+      // 비계 선분 길이 표시
+      if (stroke.points.length === 2) {
+        const distance = Math.sqrt(
+          Math.pow(stroke.points[1].x - stroke.points[0].x, 2) + 
+          Math.pow(stroke.points[1].y - stroke.points[0].y, 2)
+        );
+        const lengthMM = Math.round(distance * (300 / 96));
+        
+        // 선분 중앙에 길이 표시
+        const midX = (stroke.points[0].x + stroke.points[1].x) / 2;
+        const midY = (stroke.points[0].y + stroke.points[1].y) / 2;
+        
+        ctx.font = `${Math.max(10 / zoom, 8)}px Arial`;
+        ctx.fillStyle = '#000000';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2 / zoom;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // 텍스트 배경 (가독성 향상)
+        ctx.strokeText(`${lengthMM}mm`, midX, midY - 8);
+        ctx.fillText(`${lengthMM}mm`, midX, midY - 8);
+      }
+    });
     
-    // 하부자키 그리기
-    drawSupportPosts(ctx);
+    // 하부자키 그리기 (변환된 좌표계에서)
+    supportPosts.forEach(post => {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'transparent'; // 투명 배경
+      ctx.strokeStyle = '#000000'; // 검정색 선
+      ctx.lineWidth = 2 / zoom;
+      
+      ctx.beginPath();
+      ctx.arc(post.center.x, post.center.y, post.radius, 0, 2 * Math.PI);
+      ctx.stroke(); // 선만 그리기 (채우기 없음)
+    });
     
-    // 미리보기 선 그리기
-    drawPreviewLine(ctx);
-  }, [canvasSize, drawGrid, redrawAllStrokes, drawSupportPosts, drawPreviewLine]);
+    // 미리보기 선 그리기 (변환된 좌표계에서)
+    if (startPoint && previewPoint) {
+      if (tool.type === 'scaffold-mode') {
+        // 시스템비계 모드: 사각형 구조 미리보기
+        const structure = calculateScaffoldStructure(startPoint, previewPoint);
+        const allSegments = [...structure.horizontalSegments, ...structure.verticalSegments];
+        
+        // 비계 선분들 그리기
+        allSegments.forEach((segment, index) => {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = getScaffoldColor(segment.length);
+          ctx.lineWidth = Math.max(tool.size, 2 / zoom);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.globalAlpha = 0.7;
+          
+          ctx.beginPath();
+          ctx.moveTo(segment.start.x, segment.start.y);
+          ctx.lineTo(segment.end.x, segment.end.y);
+          ctx.stroke();
+        });
+        
+        // 하부자키 미리보기 (모든 교차점)
+        const previewPosts = createAllSupportPosts(structure);
+        previewPosts.forEach(post => {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = 'transparent'; // 투명 배경
+          ctx.strokeStyle = '#000000'; // 검정색 선
+          ctx.lineWidth = 2 / zoom;
+          
+          ctx.beginPath();
+          ctx.arc(post.center.x, post.center.y, post.radius, 0, 2 * Math.PI);
+          ctx.stroke(); // 선만 그리기 (채우기 없음)
+        });
+        
+        ctx.globalAlpha = 1;
+      } else if (tool.straightLineMode || tool.rightAngleMode) {
+        // 직선/직각 모드: 세그먼트별로 그리기
+        const segments = calculateScaffoldSegments(startPoint, previewPoint);
+        
+        segments.forEach((segment, index) => {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = getScaffoldColor(segment.length);
+          ctx.lineWidth = Math.max(tool.size, 2 / zoom);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.globalAlpha = 0.8;
+          
+          ctx.beginPath();
+          ctx.moveTo(segment.start.x, segment.start.y);
+          ctx.lineTo(segment.end.x, segment.end.y);
+          ctx.stroke();
+          
+          // 길이 표시
+          const midX = (segment.start.x + segment.end.x) / 2;
+          const midY = (segment.start.y + segment.end.y) / 2;
+          const actualDistance = Math.sqrt(
+            Math.pow(segment.end.x - segment.start.x, 2) + 
+            Math.pow(segment.end.y - segment.start.y, 2)
+          );
+          const actualLengthMM = Math.round(actualDistance * (300 / 96));
+          
+          ctx.font = `${Math.max(10 / zoom, 8)}px Arial`;
+          ctx.fillStyle = '#000000';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2 / zoom;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          ctx.strokeText(`${actualLengthMM}mm`, midX, midY - 8);
+          ctx.fillText(`${actualLengthMM}mm`, midX, midY - 8);
+        });
+        
+        ctx.globalAlpha = 1;
+      } else {
+        // 기본 미리보기
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = tool.color;
+        ctx.lineWidth = tool.size;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.5;
+        ctx.setLineDash([5 / zoom, 5 / zoom]);
+        
+        ctx.beginPath();
+        ctx.moveTo(startPoint.x, startPoint.y);
+        ctx.lineTo(previewPoint.x, previewPoint.y);
+        ctx.stroke();
+        
+        ctx.globalAlpha = 1;
+        ctx.setLineDash([]);
+      }
+    }
+
+    ctx.restore();
+  }, [canvasSize, isGridVisible, canvasOffset, zoom, strokes, supportPosts, 
+      startPoint, previewPoint, tool, calculateScaffoldStructure, 
+      createAllSupportPosts, calculateScaffoldSegments, getScaffoldColor]);
 
   // 좌표 변환 (화면 좌표 → 캔버스 좌표)
   const getCanvasPoint = useCallback((clientX: number, clientY: number): Point => {
@@ -764,21 +743,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const drawLine = useCallback((from: Point, to: Point, ctx: CanvasRenderingContext2D) => {
     ctx.globalCompositeOperation = 'source-over';
     ctx.strokeStyle = tool.color;
-    ctx.lineWidth = tool.size * zoom;
+    ctx.lineWidth = tool.size;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     ctx.beginPath();
-    ctx.moveTo(
-      (from.x * zoom + canvasOffset.x) / window.devicePixelRatio, 
-      (from.y * zoom + canvasOffset.y) / window.devicePixelRatio
-    );
-    ctx.lineTo(
-      (to.x * zoom + canvasOffset.x) / window.devicePixelRatio, 
-      (to.y * zoom + canvasOffset.y) / window.devicePixelRatio
-    );
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
     ctx.stroke();
-  }, [tool, zoom, canvasOffset]);
+  }, [tool]);
 
   // 가장 가까운 선의 끝점 찾기 (자석 기능)
   const findNearestEndpoint = useCallback((point: Point): Point | null => {
@@ -983,7 +956,15 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         points: [...prev.points, currentPoint]
       } : null);
       
+      // 실시간 그리기를 위해 변환 적용
+      ctx.save();
+      ctx.translate(canvasOffset.x / window.devicePixelRatio, canvasOffset.y / window.devicePixelRatio);
+      ctx.scale(zoom, zoom);
+      
       drawLine(lastPoint, currentPoint, ctx);
+      
+      ctx.restore();
+      
       setLastPoint(currentPoint);
     } else if (tool.type === 'line-eraser' && lastPoint) {
       // 드래그 중 지나간 선들과 하부자키 삭제
